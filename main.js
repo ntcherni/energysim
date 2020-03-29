@@ -36,6 +36,18 @@ class Agent {
 		this.watch = _watch;
 		this.home = 1; 
 	}
+
+	arriveHome() {
+		this.home = 1; 
+	}
+
+	leaveHome() {
+		this.home = -1; 
+	}
+	
+	goToSleep() {
+		this.home = 0; 
+	}
 }
 
 let probs = {
@@ -52,7 +64,7 @@ let probs = {
 		'day' : {
 			'morning' : 0.2,
 			'afternoon' : 0.,
-			'evening' : 0.025,
+			'evening' : 0.2,
 			'night' : 0.01
 		}
 	}
@@ -75,119 +87,91 @@ function onTimeToSteps(ontime, step_duration) {
 	return Math.ceil(ontime / step_duration); 
 }
 
+function storeData(x_value, y_value) {
+	data[0].x.push(x_value);
+	data[0].y.push(y_value);
+}
+
 a = new Appliance('toaster', 10, 5, 5);
 a = new Appliance('heater', 40, 10, 30);
 
 agent = new Agent(5);
 
-// each time step in minutes
-step_duration = 5; 
-steps_per_hour = 60 / step_duration;
+// --- setup for daily loop:
 
-a.max_times = 2; 
-
-max_times = 1 + Math.floor(Math.random() * Math.floor(a.max_times));
-on_steps = onTimeToSteps(a.ontime, step_duration);
-
-
-console.log("on steps:", on_steps);
-
-last_step_on = null;
-
-//appl_max_times = 1;
-console.log("max times:", max_times);
-
-times_turned_on = 0;
-
-// const plotData = 
-// { 
-// 	x: [], 
-// 	y: [],
-// 	type: 'line'
-// }
-
-const plotData = [
+// empty data object array: 
+const data = [
     {
         x: [], 
         y: [], 
 		type: 'line'
 	}
-    ];
+];
 
 
-	max_times = 2;
+// initializing some variables: 
+last_step_on = null;
+times_turned_on = 0;
+max_times_reached = false;
 
 total_watts = 0;
-// One day in the life of a toaster
-for(h = 0; h < 12; h++) {
+average = 0;
 
-	setProbByHour(a, h);
+// for step calculations: 
+step_duration = 15; 
+steps_per_hour = (60 / step_duration);
 
-	console.log("[" + h + "]", a.prob);
+// set max times for the appliance for the day
+a.max_times = 2; 
+max_times_to_turn_on = 1 + Math.floor(Math.random() * Math.floor(a.max_times));
+on_steps = onTimeToSteps(a.ontime, step_duration);
 
-	for(step = (h * steps_per_hour); step < ((steps_per_hour * h) + steps_per_hour); step++) 
-	{
+// remaking the above, seems messy
+for(hour = 0; hour < 12; hour++) {
 
-			if((step - last_step_on >= on_steps) || last_step_on == null) 
-			{
+	setProbByHour(a, hour);
+
+	console.log("[" + hour + "]", a.prob);
+
+	start_step = hour * steps_per_hour + 1;
+	
+	for(step = start_step; step < (start_step + steps_per_hour); step++) {
+		
+		// go through each step in the hour
+
+		if(a.state == -1 || a.state == 0) {
+			// appliance is off or in standby
+
+			if( !max_times_reached ) {
 				random_chance = Math.random().toFixed(2);
-				if(times_turned_on < max_times) 
-				{
-					if(random_chance > (1.0 - a.prob)) 
-					{
-						/// ON
-						a.turnOn();
 
-						// add data to plot data
-						plotData[0].x.push(step);
-						plotData[0].y.push(a.watts1);
-
-						// control for how many times appliance is turned on
-						times_turned_on++;
-						last_step_on = step;
-
-						// debug
-						console.log(step, random_chance, (1.0 - a.prob).toFixed(2),  "turning on");
-						plotData[0].x.push(step);
-						plotData[0].y.push(a.watts1);
-
-					} 
-					else 
-					{ 
-						// OFF
-						console.log(step, random_chance, (1.0 - a.prob).toFixed(2), "off - keeping off");
-						plotData[0].x.push(step);
-						plotData[0].y.push(0);
-					}
-				} 
-				else 
-				{
-					// OFF
-					console.log(step, random_chance, (1.0 - a.prob).toFixed(2), "off - max times reached");
-					plotData[0].x.push(step);
-					plotData[0].y.push(0);
+				if( random_chance > (1.0 - a.prob) ) {
+					// turn appliance on 
+					a.turnOn();
+					last_step_on = step;
+					times_turned_on++; 
+					if (times_turned_on >= max_times_to_turn_on ) max_times_reached = true;
 				}
-			} else {
-				console.log(step, random_chance, (1.0 - a.prob).toFixed(2), "keeping on");
 			}
 
-	}
-	console.log("\n");
-	// TODO: 
-		// When appliance turned on, it stays turned on for on_steps
-		// When the appliance reaches its on_steps after being turned
-		// on, it is then decided whether to put it into standby
-		// or off state by virtue of the Agent's 'watch' rating
+		} else if (a.state == 1) {
+			// appliance is on
+			if(step - last_step_on >= on_steps) {
+				// turn appliance off
+				// decide whether to put into ON or STANDBY state
+				// TODO: what is 'decide'?
 
-		// ('watch') is a measure of how conscientous the Agent is 
-		// about having good energy saving practices
+				a.turnOff();
+			} 
+		}
+		console.log(step, a.state);
+
+		total_watts += a.watts;
+		average = total_watts / step;
+		storeData(step, average);
+	}
 }
 
-
-for(i = 0; i < 12; i++) {
-
-
-	setProbByHour(a, i);
 	// turn appliance ON
 	// * happens when chance is sufficient
 	//
@@ -200,17 +184,16 @@ for(i = 0; i < 12; i++) {
 	// * happens every step when max times per day is reached
 	// ** chance does not need to be calculated here at all, simply keep off
 	// 	  after last time appliance was on is over 
-	// * happens when chance is not sufficient
+	// * happens when chance is not sufficient to turn appliance on 
 
 	// turn appliance OFF
-	// *happens when
+	// * happens on the step when last step on subtracted from the step count 
 	//
-}
 
-console.log(plotData);
-
+console.log(data);
 	
-plotlib.plot(plotData);
+plotlib.plot(data);
+
 // TODO: create X and Y values for Plots 
 // X values = Steps
 // Y Values = Wattage (For now)
