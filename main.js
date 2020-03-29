@@ -137,6 +137,24 @@ total_hours = 0;
 
 days = 200;
 
+// TODO: 
+// * Decide on final data model for JSON output
+// ** Current data format is total watt usage per day
+// * Store array of appliances in rooms 
+// * Be able to display: 
+// ** Combined data for all appliances/rooms
+// ** Specific room data
+// ** Specific appliances data
+// Later...
+// * Web interface for creating a set of initial condtions
+// * Real-time simulation of 1 time step per second
+// * Add multipliers for various other factors: 
+// ** Month
+// ** Day of the week
+// ** Type of agent
+// *** I.e. Student, Employed person, Unemployed, etc... 
+// ** Outside temperature
+
 // go through as many days as needed 
 for (day = 0; day < days; day++) { 
 
@@ -229,10 +247,10 @@ for (day = 0; day < days; day++) {
 }
 
 // finish up, display plot
-//console.log(data);
+// console.log(data);
 
 var layout = {
-	title: 'Appliance Energy Usage - ' + a.type,
+	title: 'Simulation of Appliance Energy Usage for "' + a.type + '"',
 	xaxis: {
 	  title: 'Day',
 	},
@@ -242,28 +260,3 @@ var layout = {
   };
 
 plotlib.plot(data, layout);
-
-	// turn appliance ON
-	// * happens when chance is sufficient
-	//
-
-	// keep appliance ON 
-	// * happens when last step on subtracted from current step count is not over on steps of appliance
-	//
-
-	// keep appliance OFF
-	// * happens every step when max times per day is reached
-	// ** chance does not need to be calculated here at all, simply keep off
-	// 	  after last time appliance was on is over 
-	// * happens when chance is not sufficient to turn appliance on 
-
-	// turn appliance OFF
-	// * happens on the step when last step on subtracted from the step count 
-	//
-
-
-
-// TODO: create X and Y values for Plots 
-// X values = Steps
-// Y Values = Wattage (For now)
-// Y values should be average wattage for the day
